@@ -1,0 +1,57 @@
+name: PLAN_TEST
+
+on: [workflow_dispatch]
+
+env:
+  ENV: test
+  PROJECT_NAME: aws-tenant-main-live-infrastructure
+  AWS_REGION: us-east-1
+  STATE_BUCKET: ${{ secrets.STAGE_STATE_BUCKET }}
+  STATE_LOCK_TABLE: ${{ secrets.STAGE_LOCK_TABLE }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.5
+          terraform_wrapper: false
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup terragrunt
+        uses: autero1/action-terragrunt@v1.1.0
+        with:
+          terragrunt_version: latest
+      - name: Clone repository
+        uses: actions/checkout@v3
+      - name: Check out aws-sso-user repo
+        uses: actions/checkout@v3
+        with:
+          repository: Infinite-Limit-Data-Science/aws-sso-user
+          ref: v1.0.0
+          path: modules/aws-sso-user
+          token: ${{ secrets.GH_PAT }}
+      - name: Check out aws-sso-group repo
+        uses: actions/checkout@v3
+        with:
+          repository: Infinite-Limit-Data-Science/aws-sso-group
+          ref: v1.0.0
+          path: modules/aws-sso-group
+          token: ${{ secrets.GH_PAT }}
+      - name: Check out aws-sso-permission-set repo
+        uses: actions/checkout@v3
+        with:
+          repository: Infinite-Limit-Data-Science/aws-sso-permission-set
+          ref: v1.0.0
+          path: modules/aws-sso-permission-set
+          token: ${{ secrets.GH_PAT }}     
+      - name: Terragrunt init
+        run: source scripts/init.sh
+      - name: Terragrunt plan
+        run: source scripts/plan.sh
